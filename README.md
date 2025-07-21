@@ -106,7 +106,7 @@ We hope it offers a glimpse into the future direction of emotional AI assistants
 
 **Funny Friend Project Series**
 By \[Your Name]
-🔗 GitHub: [https://github.com/yourusername](https://github.com/yourusername)
-📧 Email: [yourname@email.com](mailto:yourname@email.com)
+🔗 GitHub: https://github.com/amritasinha01/funnyfriend_video.git
+📧 Email: amritasinha.vishal@gmail.com
 
 Built with ❤️ to imagine AI that truly understands and responds to how we feel.
