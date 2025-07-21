@@ -29,8 +29,8 @@ It’s designed as a **future version** of the main web app (Funny Friend Web), 
 ### 🔹 Step 1: Clone and Install
 
 ```bash
-git clone https://github.com/yourusername/funny_friend-video.git
-cd funny_friend-video
+git clone https://github.com/amritasinha01/funnyfriend_video.git
+cd funnyfriend_video
 pip install -r requirements.txt
 ```
 
