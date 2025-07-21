@@ -99,7 +99,7 @@ def main():
             break
 
         # device commands
-        if any(d in text.lower() for d in ["fan", "light", "ac", "tv", "curtain", "party"]):
+        if any(d in text.lower() for d in ["fan", "light", "ac", "tv", "curtain", "party", "music"]):
             control_device(text)
 
         else:
