@@ -29,7 +29,7 @@ It’s designed as a **future version** of the main web app (Funny Friend Web), 
 ### 🔹 Step 1: Clone and Install
 
 ```bash
-git clone https://github.com/amritasinha01/funnyfriend_video.git
+git clone https://github.com/amritasinhayaymoji/funnyfriend_video.git
 cd funnyfriend_video
 pip install -r requirements.txt
 ```
@@ -106,7 +106,7 @@ We hope it offers a glimpse into the future direction of emotional AI assistants
 
 **Funny Friend Project Series**
 By \[Your Name]
-🔗 GitHub: https://github.com/amritasinha01/funnyfriend_video.git
-📧 Email: amritasinha.vishal@gmail.com
+🔗 GitHub: https://github.com/amritasinhayaymoji/funnyfriend_video.git
+📧 Email: amritasinha.yaymoji@gmail.com
 
 Built with ❤️ to imagine AI that truly understands and responds to how we feel.
