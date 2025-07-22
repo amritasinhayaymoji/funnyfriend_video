@@ -573,8 +573,6 @@ def webhook():
     elif intent == 'Nearby Doctors':
         reply = "To find nearby doctors, please open the app and click the 'Find Nearby Doctors' button for the map and list."
 
-    elif intent == 'Suggest Places by Emotion':
-        reply = "To find places based on your emotion, open the app, enter your mood, and select a category for nearby places."
 
     return jsonify({"fulfillmentText": reply, "source": "funny-friend-webhook"})
 
