@@ -109,4 +109,10 @@ By \[Your Name]
 🔗 GitHub: https://github.com/amritasinhayaymoji/funnyfriend_video.git
 📧 Email: amritasinha.yaymoji@gmail.com
 
-Built with ❤️ to imagine AI that truly understands and responds to how we feel.
+## 🙋‍♀️ Creator
+
+This project was conceptualized, designed, and built **solo** by **Amrita Sinha** as part of the Google for Developers 2025 Challenge.
+
+It is part of the broader "Funny Friend" project series — aiming to bring emotion-aware AI to everyday smart environments.
+
+
