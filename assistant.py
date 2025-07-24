@@ -1,18 +1,18 @@
-import cv2
+
 import requests
 import speech_recognition as sr
 import pyttsx3
-from deepface import DeepFace
 import time
-
+from camera_manager import CameraManager, monitor_unconsciousness
+import threading
 # ------------------- SETTINGS -------------------
 BACKEND_CHAT_URL   = "http://127.0.0.1:5500/llm_chat"
 BACKEND_DEVICE_URL = "http://127.0.0.1:5500/device_control"
+BACKEND_DOCTOR_URL = "http://127.0.0.1:5500/nearby_doctors"
 CAMERA_INDEX       = 0
 
 # ------------------- TTS FUNCTION -------------------
 def speak(text):
-
     print(f"Bot: {text}")
     try:
         engine = pyttsx3.init('sapi5')
@@ -38,18 +38,6 @@ def listen():
         except:
             return ""
 
-# ------------------- EMOTION DETECTION -------------------
-def detect_emotion(frame):
-    try:
-        result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        print(result)
-        return (result[0]['dominant_emotion']
-                if isinstance(result, list)
-                else result['dominant_emotion'])
-    except Exception as e:
-        print("Emotion detection error:", e)
-        return "neutral"
-
 # ------------------- DEVICE CONTROL -------------------
 def control_device(cmd):
     try:
@@ -60,34 +48,130 @@ def control_device(cmd):
             speak("Device command not recognized.")
     except:
         speak("Device service error.")
+# ------------------- CALLING FUNCTION -------------------
+def make_phone_call(phone_number):
+    try:
+        import os
+        os.system(f'adb shell am start -a android.intent.action.CALL -d tel:{phone_number}')
+        speak(f"Calling {phone_number} now.")
+    except Exception as e:
+        print(f"Error making call: {e}")
+        speak("Sorry, I couldn't make the call.")
+
+# ------------------- DOCTOR SUGGESTION -------------------
+def suggest_doctor(location_text=None, specialization="doctor"):
+    if not location_text:
+        speak("Should I suggest nearby doctors?")
+        confirmation = listen().lower()
+        if not any(k in confirmation for k in ["yes suggest", "okay suggest", "sure suggest", "please tell", "yeah tell"]):
+            speak("Alright, let me know if you change your mind.")
+            return
+        speak("Please tell me your location — anyone : city, state, or country.")
+        location_text = listen().strip()
+
+    speak("What kind of doctor do you want to find? You can say general, dentist, pediatrician, cardiologist, etc.")
+    specialization = listen().strip().lower()
+    if specialization == "":
+        specialization = "doctor"
+
+    speak(f"Searching for {specialization} near {location_text}")
+    try:
+        geo_resp = requests.get("https://nominatim.openstreetmap.org/search", params={
+            'q': location_text,
+            'format': 'json'
+        }, headers={'User-Agent': 'FunnyFriendBot/1.0'})
+        geo_data = geo_resp.json()
+        if not geo_data:
+            speak("Sorry, I couldn't find that location. Please try again.")
+            return
+
+        lat = geo_data[0]['lat']
+        lng = geo_data[0]['lon']
+        payload = {"lat": lat, "lng": lng, "keyword": specialization}
+        resp = requests.post(BACKEND_DOCTOR_URL, json=payload, timeout=5)
+        data = resp.json()
+        doctors = data.get("results", [])
+
+        if not doctors:
+            speak(f"Sorry, I couldn't find any {specialization} near {location_text}.")
+            return
+
+        speak(f"Here are some {specialization} options near you:")
+        for index, doc in enumerate(doctors[:3]):
+            name = doc.get("name", "Unknown clinic")
+            rating = doc.get("rating", "no rating")
+            address = doc.get("vicinity", "no address listed")
+            phone = doc.get("phone", "no phone number available")
+            speak(f"{index + 1}. {name}, rated {rating}, at {address}. Contact: {phone}.")
+
+        speak("Would you like me to call any of these doctors?")
+        response = listen().lower()
+        word_to_digit = {
+            "first": "1", "1": "1", "one": "1",
+            "second": "2", "2": "2", "two": "2",
+            "third": "3", "3": "3", "three": "3"
+        }
+
+        selected_index = None
+        for word, digit in word_to_digit.items():
+            if f"call {word}" in response or f"number {word}" in response or word in response:
+                selected_index = int(digit) - 1
+                break
+
+        if selected_index is not None and 0 <= selected_index < len(doctors):
+            selected = doctors[selected_index]
+            phone_number = selected.get("phone", "")
+            if phone_number and "no" not in phone_number.lower():
+                make_phone_call(phone_number)
+            else:
+                speak("This doctor does not have a phone number listed.")
+            return
+
+        if any(k in response for k in ["yes", "call", "dial", "doctor", "number"]):
+            speak("Please say the number — first, second, or third doctor.")
+            choice = listen().lower()
+            for word, digit in word_to_digit.items():
+                if word in choice:
+                    selected_index = int(digit) - 1
+                    break
+            if selected_index is not None and 0 <= selected_index < len(doctors):
+                selected = doctors[selected_index]
+                phone_number = selected.get("phone", "")
+                if phone_number and "no" not in phone_number.lower():
+                    make_phone_call(phone_number)
+                else:
+                    speak("This doctor does not have a phone number listed.")
+            else:
+                speak("Sorry, I didn't catch which doctor to call.")
+        else:
+            speak("Okay, no call will be made.")
+
+    except Exception as e:
+        print("Error in location-based doctor search:", e)
+        speak("Sorry, I ran into trouble finding doctors.")
 
 # ------------------- MAIN ASSISTANT -------------------
 def main():
+    speak("Hello! I'm your Funny Friend AI.")
+    speak("Before we begin, how are you feeling today?")
+    emotion = listen().lower().strip()
+    print(f"Detected emotion from voice: {emotion}")
 
-    cap = cv2.VideoCapture(CAMERA_INDEX)
-    if not cap.isOpened():
-        speak("Camera unavailable.")
-        return
+    # Emergency emotion response
+    if any(e in emotion for e in ["sad", "depressed", "angry", "anxious", "fear", "disgust"]):
+        speak("You sound a bit low. Are you okay?")
+        response = listen().lower()
+        if any(word in response for word in ["no", "not fine", "bad", "hurt", "pain", "sad"]):
+            suggest_doctor()
+        else:
+            speak("Okay, glad you're managing.")
 
-    speak("Starting camera. Please look here.")
-    time.sleep(1)
-    ret, frame = cap.read()
-    cap.release()
-    if not ret:
-        speak("Could not capture frame.")
-        return
+    doctor_mode = False
+    location_collected = False
+    specialization_collected = False
+    location_text = ""
+    specialization = ""
 
-
-    cv2.imshow("Preview", frame)
-    cv2.waitKey(2000)
-    cv2.destroyAllWindows()
-
-
-    speak("Hello! Nice to see you.")
-    emotion = detect_emotion(frame)
-    print(f"Detected emotion: {emotion}")
-
-    # 3️⃣ chat and device control
     while True:
         text = listen().strip()
         if not text:
@@ -98,20 +182,62 @@ def main():
             speak("Goodbye! Take care.")
             break
 
-        # device commands
         if any(d in text.lower() for d in ["fan", "light", "ac", "tv", "curtain", "party", "music"]):
             control_device(text)
+            continue
 
-        else:
-            # LLM chat with detected emotion context
-            try:
-                reply = requests.post(
-                    BACKEND_CHAT_URL,
-                    json={"prompt": f"My emotion is {emotion}. User says: {text}"}
-                ).json().get("reply", "")
-            except:
-                reply = "Chat service unavailable."
-            speak(reply)
+        if any(k in text.lower() for k in ["doctor", "doctors", "nearby doctor", "psychiatrist", "clinic"]):
+            doctor_mode = True
+            location_collected = False
+            specialization_collected = False
+            speak("Should I suggest nearby doctors?")
+            confirmation = listen().lower()
+            if any(k in confirmation for k in ["yes suggest", "okay suggest", "sure suggest", "please tell", "yeah tell"]):
+                speak("Please tell me your location — anyone : city, state, or country.")
+            else:
+                speak("Alright, let me know if you change your mind.")
+                doctor_mode = False
+            continue
 
+        if doctor_mode and not location_collected:
+            location_text = text
+            location_collected = True
+            speak( " tell once more")
+            continue
+
+        if doctor_mode and location_collected and not specialization_collected:
+            specialization = text
+            specialization_collected = True
+            suggest_doctor(location_text=location_text, specialization=specialization)
+            doctor_mode = False
+            continue
+
+        try:
+            prompt = f"User is feeling {emotion}. They said: '{text}'. Respond kindly."
+            reply = requests.post(BACKEND_CHAT_URL, json={"prompt": prompt}).json().get("reply", "")
+        except:
+            reply = "Chat service unavailable."
+        speak(reply)
+
+# ------------------- UNCONSCIOUSNESS MONITOR -------------------
 if __name__ == "__main__":
-    main()
+    def emergency_alert():
+        speak("🚨 Emergency detected! Please respond or I will notify your contact.")
+        time.sleep(2)
+        print("📞 Simulating emergency call...")
+        speak("Calling emergency contact now. Please stay calm, help is on the way.")
+
+
+    if __name__ == "__main__":
+        camera_manager = CameraManager()
+
+        # Start monitoring in background
+        monitoring_thread = threading.Thread(
+            target=monitor_unconsciousness,
+            args=(camera_manager, 10, emergency_alert),
+            daemon=True
+        )
+        monitoring_thread.start()
+
+        main()
+

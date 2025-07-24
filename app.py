@@ -1,9 +1,6 @@
 import os
-from flask import Flask, request, jsonify
+from flask import  request, jsonify
 from flask_cors import CORS
-from emotion_model import load_emotion_model
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
 import json, random, requests
 import joblib
 from math import radians, sin, cos, sqrt, atan2
@@ -87,17 +84,57 @@ def talk():
 @app.route('/nearby_doctors', methods=['POST'])
 def nearby_doctors():
     data = request.get_json()
-    lat, lng = data['lat'], data['lng']
+    lat = data.get('lat')
+    lng = data.get('lng')
+    keyword = data.get('keyword', 'doctor')  # Default to 'doctor'
+
+    if not lat or not lng:
+        return jsonify({"error": "Missing coordinates"}), 400
+
     api_key = 'AIzaSyByxAfy9rZaiWZ1rD9R_JkPbL5WNykpXoI'
-    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    params = {
+
+    # Step 1: Search nearby places using keyword
+    search_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    search_params = {
         'location': f'{lat},{lng}',
         'radius': 3000,
-        'keyword': 'psychiatrist OR mental health',
+        'keyword': keyword,
         'key': api_key
     }
-    resp = requests.get(url, params=params)
-    return jsonify(resp.json())
+
+    try:
+        search_resp = requests.get(search_url, params=search_params)
+        search_data = search_resp.json()
+        results = search_data.get('results', [])[:3]  # Top 3 results only
+
+        # Step 2: For each result, get details including phone number
+        detailed_results = []
+        for place in results:
+            place_id = place.get('place_id')
+            detail_url = "https://maps.googleapis.com/maps/api/place/details/json"
+            detail_params = {
+                'place_id': place_id,
+                'fields': 'name,rating,vicinity,formatted_phone_number,international_phone_number',
+                'key': api_key
+            }
+
+            detail_resp = requests.get(detail_url, params=detail_params)
+            detail_data = detail_resp.json()
+            result = detail_data.get('result', {})
+
+            detailed_results.append({
+                "name": result.get('name', place.get('name')),
+                "rating": result.get('rating', place.get('rating', 'no rating')),
+                "vicinity": result.get('vicinity', place.get('vicinity', 'no address listed')),
+                "phone": result.get('formatted_phone_number') or result.get('international_phone_number') or "Not available"
+            })
+
+        return jsonify({"results": detailed_results})
+
+    except Exception as e:
+        print("Error fetching doctor data:", e)
+        return jsonify({"error": "Failed to retrieve doctor data"}), 500
+
 
 
 # 😂 Live joke from icanhazdadjoke.com

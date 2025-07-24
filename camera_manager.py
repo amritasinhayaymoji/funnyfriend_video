@@ -1,0 +1,106 @@
+import cv2
+import threading
+import time
+
+class CameraManager:
+    def __init__(self, camera_index=0):
+        self.camera_index = camera_index
+        self.cap = None
+        self.lock = threading.Lock()
+        self.in_use = False
+
+    def start_camera(self):
+        with self.lock:
+            if not self.in_use:
+                # Use DirectShow backend on Windows to avoid MSMF errors
+                self.cap = cv2.VideoCapture(self.camera_index)  # Let OpenCV auto-select backend
+
+                if not self.cap.isOpened():
+                    raise Exception("Cannot open camera")
+                self.in_use = True
+                return self.cap
+            else:
+                raise Exception("Camera already in use")
+
+    def release_camera(self):
+        with self.lock:
+            if self.cap and self.in_use:
+                self.cap.release()
+                self.in_use = False
+
+    def is_in_use(self):
+        with self.lock:
+            return self.in_use
+
+    def read_frame(self):
+        with self.lock:
+            if self.cap and self.in_use:
+                ret, frame = self.cap.read()
+                if not ret:
+                    raise Exception("Failed to grab frame")
+                return frame
+            else:
+                raise Exception("Camera not started or already released")
+
+# ---------- Test Camera Manually ----------
+def test_camera():
+    camera_manager = CameraManager()
+    try:
+        camera_manager.start_camera()
+    except Exception as e:
+        print(f"Error starting camera: {e}")
+        return
+
+    print("Camera started. Press 'q' to quit.")
+    while True:
+        try:
+            frame = camera_manager.read_frame()
+        except Exception as e:
+            print(f"Error reading frame: {e}")
+            break
+
+        cv2.imshow("Camera Test", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    camera_manager.release_camera()
+    cv2.destroyAllWindows()
+
+# ---------- Monitor for Unconsciousness ----------
+def monitor_unconsciousness(camera_manager, threshold_seconds=10, callback=None):
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    last_seen = time.time()
+    alert_triggered = False  # ✅ NEW: flag to avoid multiple alerts
+
+    try:
+        camera_manager.start_camera()
+    except Exception as e:
+        print(f"Monitor: {e}")
+        return
+
+    while True:
+        try:
+            frame = camera_manager.read_frame()
+        except Exception as e:
+            print(f"Monitor frame error: {e}")
+            break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+        if len(faces) > 0:
+            last_seen = time.time()
+            alert_triggered = False  # ✅ Reset flag if face is seen again
+        else:
+            if time.time() - last_seen > threshold_seconds and not alert_triggered:
+                alert_triggered = True
+                if callback:
+                    callback()
+        time.sleep(1)
+
+    camera_manager.release_camera()
+
+
+# ---------- Entry Point ----------
+if __name__ == "__main__":
+    test_camera()
