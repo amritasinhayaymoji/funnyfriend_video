@@ -12,11 +12,12 @@ class CameraManager:
     def start_camera(self):
         with self.lock:
             if not self.in_use:
-                # Use DirectShow backend on Windows to avoid MSMF errors
-                self.cap = cv2.VideoCapture(self.camera_index)  # Let OpenCV auto-select backend
-
+                # -----------------------------------------
+                # Use DirectShow backend on Windows:
+                # -----------------------------------------
+                self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
                 if not self.cap.isOpened():
-                    raise Exception("Cannot open camera")
+                    raise Exception("Cannot open camera (DirectShow)")
                 self.in_use = True
                 return self.cap
             else:
@@ -67,35 +68,41 @@ def test_camera():
     cv2.destroyAllWindows()
 
 # ---------- Monitor for Unconsciousness ----------
-def monitor_unconsciousness(camera_manager, threshold_seconds=10, callback=None):
+def monitor_unconsciousness(camera_manager, threshold_seconds=150, callback=None):
+    import assistant  # Access shared state
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    last_seen = time.time()
-    alert_triggered = False  # ✅ NEW: flag to avoid multiple alerts
 
     try:
         camera_manager.start_camera()
     except Exception as e:
-        print(f"Monitor: {e}")
+        print(f"Monitor start error: {e}")
         return
 
     while True:
         try:
             frame = camera_manager.read_frame()
-        except Exception as e:
-            print(f"Monitor frame error: {e}")
+        except:
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
         if len(faces) > 0:
-            last_seen = time.time()
-            alert_triggered = False  # ✅ Reset flag if face is seen again
+            assistant.face_last_seen = time.time()
+            if assistant.emergency_triggered:
+                print("👀 Face reappeared, resetting emergency.")
+                assistant.emergency_triggered = False
         else:
-            if time.time() - last_seen > threshold_seconds and not alert_triggered:
-                alert_triggered = True
-                if callback:
+            if time.time() - assistant.face_last_seen > threshold_seconds:
+                if not assistant.emergency_triggered and callback:
+                    assistant.last_alert_time = time.time()  # ⏱️
                     callback()
+
+                # 🔁 Reset trigger after 30 seconds of alert, even if no face
+                elif assistant.emergency_triggered and (time.time() - assistant.last_alert_time > 150):
+                    print("🔁 Resetting emergency trigger after timeout.")
+                    assistant.emergency_triggered = False
+
         time.sleep(1)
 
     camera_manager.release_camera()

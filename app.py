@@ -309,6 +309,7 @@ def device_control():
             if device_states[device]:
                 return jsonify(success=True, device=device, action="volume_up")
         elif any(k in text for k in ["volume down", "decrease volume", "lower"]):
+
             if device_states[device]:
                 return jsonify(success=True, device=device, action="volume_down")
         elif "mute" in text:

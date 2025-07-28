@@ -10,8 +10,14 @@ BACKEND_CHAT_URL   = "http://127.0.0.1:5500/llm_chat"
 BACKEND_DEVICE_URL = "http://127.0.0.1:5500/device_control"
 BACKEND_DOCTOR_URL = "http://127.0.0.1:5500/nearby_doctors"
 CAMERA_INDEX       = 0
+emergency_triggered = False
+face_last_seen = time.time()
+last_alert_time = 0  # ⏱️ New: track when last alert fired
+
 
 # ------------------- TTS FUNCTION -------------------
+tts_lock = threading.Lock()
+
 def speak(text):
     print(f"Bot: {text}")
     try:
@@ -21,22 +27,45 @@ def speak(text):
     engine.setProperty('rate', 150)
     voices = engine.getProperty('voices')
     engine.setProperty('voice', voices[0].id)
-    engine.say(text)
-    engine.runAndWait()
-    time.sleep(0.2)
 
+    with tts_lock:
+        engine.say(text)
+        engine.runAndWait()
+        engine.stop()
+
+    time.sleep(0.5)
 # ------------------- VOICE LISTENER -------------------
 recognizer = sr.Recognizer()
 
+# assistant.py में
+
+import speech_recognition as sr
+recognizer = sr.Recognizer()
+
 def listen():
-    with sr.Microphone() as source:
-        recognizer.adjust_for_ambient_noise(source, duration=0.5)
-        print("🎙️ Listening...")
-        try:
+    try:
+        with sr.Microphone() as source:
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            print("🎙️ Listening...")
             audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
-            return recognizer.recognize_google(audio)
-        except:
-            return ""
+        return recognizer.recognize_google(audio)
+    except sr.WaitTimeoutError:
+        print("[Mic] No speech detected (timeout).")
+        return ""
+    except sr.UnknownValueError:
+        print("[Mic] Could not understand audio.")
+        return ""
+    except sr.RequestError as e:
+        print(f"[Mic] API unavailable: {e}")
+        return ""
+    except OSError as e:
+        # Catch Stream closed or device errors
+        print(f"[Mic] OS error: {e}")
+        return ""
+    except Exception as e:
+        print(f"[Mic] Unexpected error: {e}")
+        return ""
+
 
 # ------------------- DEVICE CONTROL -------------------
 def control_device(cmd):
@@ -63,7 +92,7 @@ def suggest_doctor(location_text=None, specialization="doctor"):
     if not location_text:
         speak("Should I suggest nearby doctors?")
         confirmation = listen().lower()
-        if not any(k in confirmation for k in ["yes suggest", "okay suggest", "sure suggest", "please tell", "yeah tell"]):
+        if not any(k in confirmation for k in ["suggest doctor", "suggest doctors", "yes suggest", "show doctor", "show doctors"]):
             speak("Alright, let me know if you change your mind.")
             return
         speak("Please tell me your location — anyone : city, state, or country.")
@@ -87,7 +116,8 @@ def suggest_doctor(location_text=None, specialization="doctor"):
 
         lat = geo_data[0]['lat']
         lng = geo_data[0]['lon']
-        payload = {"lat": lat, "lng": lng, "keyword": specialization}
+        search_keyword = f"{specialization} doctor"
+        payload = {"lat": lat, "lng": lng, "keyword": search_keyword}
         resp = requests.post(BACKEND_DOCTOR_URL, json=payload, timeout=5)
         data = resp.json()
         doctors = data.get("results", [])
@@ -154,12 +184,14 @@ def suggest_doctor(location_text=None, specialization="doctor"):
 def main():
     speak("Hello! I'm your Funny Friend AI.")
     speak("Before we begin, how are you feeling today?")
+    time.sleep(0.5)
     emotion = listen().lower().strip()
     print(f"Detected emotion from voice: {emotion}")
 
     # Emergency emotion response
     if any(e in emotion for e in ["sad", "depressed", "angry", "anxious", "fear", "disgust"]):
         speak("You sound a bit low. Are you okay?")
+        time.sleep(0.5)
         response = listen().lower()
         if any(word in response for word in ["no", "not fine", "bad", "hurt", "pain", "sad"]):
             suggest_doctor()
@@ -180,6 +212,7 @@ def main():
 
         if text.lower() in ("exit", "quit", "bye"):
             speak("Goodbye! Take care.")
+            time.sleep(0.5)
             break
 
         if any(d in text.lower() for d in ["fan", "light", "ac", "tv", "curtain", "party", "music"]):
@@ -191,11 +224,14 @@ def main():
             location_collected = False
             specialization_collected = False
             speak("Should I suggest nearby doctors?")
+            time.sleep(0.5)
             confirmation = listen().lower()
-            if any(k in confirmation for k in ["yes suggest", "okay suggest", "sure suggest", "please tell", "yeah tell"]):
+            if any(k in confirmation for k in ["suggest doctor", "suggest doctors", "yes suggest", "show doctor", "show doctors"]):
                 speak("Please tell me your location — anyone : city, state, or country.")
+                time.sleep(0.5)
             else:
                 speak("Alright, let me know if you change your mind.")
+                time.sleep(0.5)
                 doctor_mode = False
             continue
 
@@ -222,10 +258,26 @@ def main():
 # ------------------- UNCONSCIOUSNESS MONITOR -------------------
 if __name__ == "__main__":
     def emergency_alert():
+        global emergency_triggered
+        if emergency_triggered:
+            return
+        emergency_triggered = True
+
         speak("🚨 Emergency detected! Please respond or I will notify your contact.")
-        time.sleep(2)
+        time.sleep(3)
+        response = listen().lower()
+
+        if any(k in response for k in ["i am fine", "i'm fine", "cancel", "not emergency"]):
+            speak("Okay, staying alert but not calling anyone.")
+            time.sleep(0.5)
+            emergency_triggered = False
+            return
+
         print("📞 Simulating emergency call...")
         speak("Calling emergency contact now. Please stay calm, help is on the way.")
+        time.sleep(0.5)
+
+        emergency_triggered = False  # ✅ Reset so future emergencies can be triggered
 
 
     if __name__ == "__main__":
@@ -234,7 +286,7 @@ if __name__ == "__main__":
         # Start monitoring in background
         monitoring_thread = threading.Thread(
             target=monitor_unconsciousness,
-            args=(camera_manager, 10, emergency_alert),
+            args=(camera_manager, 150, emergency_alert),
             daemon=True
         )
         monitoring_thread.start()
