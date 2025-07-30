@@ -68,7 +68,7 @@ def test_camera():
     cv2.destroyAllWindows()
 
 # ---------- Monitor for Unconsciousness ----------
-def monitor_unconsciousness(camera_manager, threshold_seconds=150, callback=None):
+def monitor_unconsciousness(camera_manager, threshold_seconds=20, callback=None):
     import assistant  # Access shared state
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -99,7 +99,7 @@ def monitor_unconsciousness(camera_manager, threshold_seconds=150, callback=None
                     callback()
 
                 # 🔁 Reset trigger after 30 seconds of alert, even if no face
-                elif assistant.emergency_triggered and (time.time() - assistant.last_alert_time > 150):
+                elif assistant.emergency_triggered and (time.time() - assistant.last_alert_time > 20):
                     print("🔁 Resetting emergency trigger after timeout.")
                     assistant.emergency_triggered = False
 

@@ -20,7 +20,6 @@ Suggest nearby doctors based on location and emotion, with call simulation
 It also engages in funny or empathetic chats, depending on your mood.
 
 🚫 Note: This prototype runs entirely outside the browser because web browsers restrict access to real-time camera feeds, making deep integration impossible in a web-only environment.
-> 📝 This is not part of the Google Developer Challenge submission, but is featured in the YouTube demo as a **"what’s next"** showcase.
 
 ---
 
@@ -129,8 +128,8 @@ Emotion-driven device control (lights/fans/music)
 
 This project is shown in the YouTube demo of our official competition submission:
 
-* 🔗 **Main Project**: Funny Friend Web
-* 📺 **Watch Full Demo Video**: YouTube Link
+* 🔗 **Main Project**: https://github.com/amritasinhayaymoji/funnyfriend.git
+* 📺 **Watch Full Demo Video**: https://youtu.be/5X4x4VMHWZk
 
 ---
 
@@ -146,14 +145,13 @@ We hope it offers a glimpse into the future direction of emotional AI assistants
 
 ## 👩‍💻 Created By
 
-**Funny Friend Project Series**
-By \Amrita Sinha
-🔗 GitHub: https://github.com/amritasinhayaymoji/funnyfriend_video.git
-🔗 Main Project: [Funny Friend Web](https://github.com/amritasinhayaymoji/funnyfriend)
-📧 Email: amritasinha.yaymoji@gmail.com
+**Funny Friend Project Series**  
+**By:** *Amrita Sinha*  
+🔗 **Prototype GitHub:** [Funny Friend – Video Assistant](https://github.com/amritasinhayaymoji/funnyfriend_video.git)  
+🔗 **Main Project:** [Funny Friend – Web Version](https://github.com/amritasinhayaymoji/funnyfriend)  
+📧 **Email:** amritasinha.yaymoji@gmail.com  
 
 Built with ❤️ to imagine AI that truly understands and responds to how we feel.
-
 ---
 ### 🧪 Note on Free Tools Used
 

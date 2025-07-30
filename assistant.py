@@ -263,7 +263,7 @@ if __name__ == "__main__":
             return
         emergency_triggered = True
 
-        speak("🚨 Emergency detected! Please respond or I will notify your contact.")
+        speak(" Emergency detected! Please respond or I will notify your contact.")
         time.sleep(3)
         response = listen().lower()
 
@@ -273,7 +273,7 @@ if __name__ == "__main__":
             emergency_triggered = False
             return
 
-        print("📞 Simulating emergency call...")
+        print(" Simulating emergency call...")
         speak("Calling emergency contact now. Please stay calm, help is on the way.")
         time.sleep(0.5)
 
@@ -286,7 +286,7 @@ if __name__ == "__main__":
         # Start monitoring in background
         monitoring_thread = threading.Thread(
             target=monitor_unconsciousness,
-            args=(camera_manager, 150, emergency_alert),
+            args=(camera_manager, 20, emergency_alert),
             daemon=True
         )
         monitoring_thread.start()
