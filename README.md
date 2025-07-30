@@ -135,11 +135,13 @@ This project is shown in the YouTube demo of our official competition submission
 
 ## 📝 For Judges
 
-This repo is not submitted in the official Google Home API Developer Challenge.
-It’s shown in the demo video to highlight the next-level potential of the Funny Friend assistant — moving beyond browser into real-world smart interfaces.
-🌐 Browser-based implementation was not used in this prototype to allow deeper system-level integration (e.g., webcam, real-time device control). This backend-first 
-  approach enabled smoother testing of AI and hardware workflows beyond browser limits.
-We hope it offers a glimpse into the future direction of emotional AI assistants.
+This repository showcases the extended prototype of Funny Friend: Yaymoji, submitted alongside the main browser-based version.
+
+It demonstrates advanced features like emergency detection and device control using voice and camera — built as a backend-first system to overcome browser limitations (e.g., webcam access, real-time hardware interaction).
+
+While the primary browser version supports most functionality, this prototype highlights how Funny Friend can evolve into a real-world smart assistant beyond the browser.
+
+Together, both versions show the scalable potential of emotional AI, from web to home environments.
 
 ---
 
