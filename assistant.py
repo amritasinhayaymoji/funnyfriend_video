@@ -90,7 +90,7 @@ def make_phone_call(phone_number):
 # ------------------- DOCTOR SUGGESTION -------------------
 def suggest_doctor(location_text=None, specialization="doctor"):
     if not location_text:
-        speak("Should I suggest nearby doctors?")
+        speak("Would you like me to suggest nearby doctors? You can say things like 'yes suggest', 'show doctors', or 'suggest doctor'.")
         confirmation = listen().lower()
         if not any(k in confirmation for k in ["suggest doctor", "suggest doctors", "yes suggest", "show doctor", "show doctors"]):
             speak("Alright, let me know if you change your mind.")
